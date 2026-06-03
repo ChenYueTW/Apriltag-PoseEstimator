@@ -1,6 +1,9 @@
 import cv2
-import time
+from pupil_apriltags import Detector
 
+from fps_caculator import FPSCaculator
+
+# Camera
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
 
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
@@ -8,15 +11,16 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 800)
 cap.set(cv2.CAP_PROP_FPS, 120)
 
+# Apriltag
+detector = Detector(families="tag36h11")
+
 print("width :", cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 print("height:", cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print("fps   :", cap.get(cv2.CAP_PROP_FPS))
 
 DISPLAY_SCALE = 0.5
 
-frame_count = 0
-start_time = time.time()
-display_fps = 0.0
+fps_caculator = FPSCaculator()
 
 while True:
     ret, image = cap.read()
@@ -25,15 +29,20 @@ while True:
         print("Cannot read frame")
         break
 
-    frame_count += 1
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    detections = detector.detect(gray)
 
-    now = time.time()
-    elapsed = now - start_time
+    for detection in detections:
+        corners = detection.corners.astype(int)
+        for i in range(4):
+            cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), 2)
+        cv2.circle(image, tuple(detection.center.astype(int)), 5, (0, 0, 25), -1)
 
-    if elapsed >= 1.0:
-        display_fps = frame_count / elapsed
-        frame_count = 0
-        start_time = now
+        # id
+        cv2.putText(image, str(detection.tag_id), (corners[0][0], corners[0][1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+    fps_caculator.update()
 
     display = cv2.resize(
         image,
@@ -43,16 +52,7 @@ while True:
         interpolation=cv2.INTER_AREA
     )
 
-    cv2.putText(
-        display,
-        f"FPS: {display_fps:.1f}",
-        (8, 18),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.45,
-        (0, 255, 0), 
-        1,
-        cv2.LINE_AA
-    )
+    fps_caculator.draw(display)
 
     cv2.imshow("Camera", display)
 
