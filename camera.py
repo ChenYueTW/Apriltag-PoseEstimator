@@ -1,8 +1,15 @@
 import cv2
 import math
+import numpy as np
 from pupil_apriltags import Detector
 
 from fps_caculator import FPSCaculator
+
+CALIB_FILE = "camera.calib.npz"
+
+data = np.load(CALIB_FILE)
+camera_matrix = data["camera_matrix"]
+dist_coeffs = data["dist_coeffs"]
 
 # Camera
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
@@ -48,14 +55,22 @@ while True:
         center_y = detection.center[1]
 
         # image center
-        cx = w / 2
-        cy = h / 2
+        point = np.array(
+            [[[center_x, center_y]]],
+            dtype=np.float32
+        )
 
-        fx = w / (2 * math.tan(math.radians(HORIZONTAL_FOV / 2)))
-        fy = fx
+        normalized = cv2.undistortPoints(
+            point,
+            camera_matrix,
+            dist_coeffs
+        )
 
-        tx = math.degrees(math.atan((center_x - cx) / fx))
-        ty = -math.degrees(math.atan((center_y - cy) / fy))
+        x = normalized[0][0][0]
+        y = normalized[0][0][1]
+
+        tx = math.degrees(math.atan(x))
+        ty = -math.degrees(math.atan(y))
 
         # id & tx ty
         cv2.putText(
