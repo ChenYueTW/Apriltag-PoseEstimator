@@ -10,7 +10,7 @@ dist_coeffs = data["dist_coeffs"]
 
 class PoseEstimator:
     def __init__(self):
-        self.camera_pose = np.array([ ])
+        self.camera_pose = np.array([0.088957, 0.030321, 0.070595])
         self.camera_pitch = math.radians(-25.0) # degree
         self.central_sight = self.rotation_matrix_from_axis_angle(np.array([0, 1, 0]), self.camera_pitch) @ np.array([1.0, 0.0, 0.0])
         self.camera_x_axis = np.cross(self.central_sight, np.array([0.0, 0.0, 1.0]))
@@ -56,7 +56,7 @@ class PoseEstimator:
                       [v1[2], -v2[2], v3[2]]])
         
         A = np.linalg.inv(B) * v4
-        A[3] = 1
+        A = np.append(A, 1)
 
         # Caculate lambda
         l1 = np.linalg.norm(A[1] * v2 - A[0] * v1)
@@ -68,10 +68,10 @@ class PoseEstimator:
 
         t = lambda_length * A
 
-        poses = np.array()
+        poses = np.zeros((4, 3))
 
         for i in range(4):
-            np.append(poses, self.camera_pose + t[i] * target_vectors[i])
+            poses[i] = self.camera_pose + t[i] * target_vectors[i]
 
         return poses
 

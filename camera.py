@@ -53,7 +53,7 @@ while True:
             cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
         cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
-        target_vectors = np.array()
+        target_vectors = np.zeros((4, 3))
 
         for i in range(4):
             corner_x = corners[i][0]
@@ -61,18 +61,18 @@ while True:
 
             pose = pose_estimator.getTargetVectorFromPixel(corner_x, corner_y)
 
-            np.append(target_vectors, pose)
+            target_vectors[i] = pose
 
         # center_x = detection.center[0]
         # center_y = detection.center[1]
         # center_pose = pose_estimator.getTargetVectorFromPixel(center_x, center_y)
         
         # Apriltag pose
-        apriltag_pose = np.mean(pose_estimator.getApriltagPose(target_vectors))
+        apriltag_pose = np.mean(pose_estimator.getApriltagPose(target_vectors), axis=0)
 
         cv2.putText(
             image,
-            f"ID:{detection.tag_id} POSE:({apriltag_pose[0]}, {apriltag_pose[1]}, {apriltag_pose[2]})",
+            f"ID:{detection.tag_id} POSE:({apriltag_pose[0]:.2f}, {apriltag_pose[1]:.2f}, {apriltag_pose[2]:.2f})",
             (corners[0][0], corners[0][1] - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
@@ -80,13 +80,9 @@ while True:
             2
         )
 
-        corner_text = " ".join(
-            f"P{i + 1}={format_pose(pose)}"
-            for i, pose in enumerate(corner_poses)
-        )
         print(
             f"ID={detection.tag_id} "
-            f"POSE=({apriltag_pose[0]}, {apriltag_pose[1]}, {apriltag_pose[2]})"
+            f"POSE=({apriltag_pose[0]:.2f}, {apriltag_pose[1]:.2f}, {apriltag_pose[2]:.2f})"
         )
 
     fps_caculator.update()
