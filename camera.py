@@ -56,8 +56,8 @@ while True:
         target_vectors = np.zeros((4, 3))
 
         for i in range(4):
-            corner_x = corners[i][0]
-            corner_y = corners[i][1]
+            corner_x = corners_float[i][0]
+            corner_y = corners_float[i][1]
 
             pose = pose_estimator.getTargetVectorFromPixel(corner_x, corner_y)
 
@@ -68,6 +68,7 @@ while True:
         # center_pose = pose_estimator.getTargetVectorFromPixel(center_x, center_y)
         
         # Apriltag pose
+        # apriltag_pose = pose_estimator.getTargetVectorFromPixel(center[0], center[1])
         apriltag_pose = np.mean(pose_estimator.getApriltagPose(target_vectors), axis=0)
 
         cv2.putText(

@@ -15,12 +15,12 @@ class PoseEstimator:
         self.central_sight = self.rotation_matrix_from_axis_angle(np.array([0, 1, 0]), self.camera_pitch) @ np.array([1.0, 0.0, 0.0])
         self.camera_x_axis = np.cross(self.central_sight, np.array([0.0, 0.0, 1.0]))
         self.camera_y_axis = np.cross(self.camera_x_axis, self.central_sight)
-        self.apriltag_side_length = 0.3 # TODO
+        self.apriltag_side_length = 0.1651
         
     def getTargetVector(self, tx, ty):
         target_x = self.rotation_matrix_from_axis_angle(self.camera_y_axis, math.radians(-tx)) @ self.central_sight
         target_y = self.rotation_matrix_from_axis_angle(self.camera_x_axis, math.radians(ty)) @ self.central_sight
-        target = np.cross(np.cross(self.camera_x_axis, target_y), np.cross(self.camera_y_axis, target_x))
+        target = np.cross(np.cross(self.camera_y_axis, target_x), np.cross(self.camera_x_axis, target_y))
 
         return target
     
@@ -29,7 +29,7 @@ class PoseEstimator:
             [[[x, y]]],
             dtype=np.float32
         )
-
+        
         normalized = cv2.undistortPoints(
             point,
             camera_matrix,
@@ -55,7 +55,7 @@ class PoseEstimator:
                       [v1[1], -v2[1], v3[1]],
                       [v1[2], -v2[2], v3[2]]])
         
-        A = np.linalg.inv(B) * v4
+        A = np.linalg.inv(B) @ v4
         A = np.append(A, 1)
 
         # Caculate lambda
