@@ -92,11 +92,11 @@ class PoseEstimator:
         ])
 
         return R
-    
+
     def normalize(self, v):
         length = np.linalg.norm(v)
 
         if length == 0:
             return v
-        
+
         return v / length

@@ -4,6 +4,7 @@ import numpy as np
 from pupil_apriltags import Detector
 from pose_estimator import PoseEstimator
 from fps_caculator import FPSCaculator
+from pose_estimator import PoseEstimator
 
 CALIB_FILE = "camera.calib.npz"
 
@@ -27,7 +28,7 @@ print("height:", cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 print("fps   :", cap.get(cv2.CAP_PROP_FPS))
 
 DISPLAY_SCALE = 0.5
-HORIZONTAL_FOV = 79.0
+APRILTAG_SIDE_LENGTH = 0.16
 
 fps_caculator = FPSCaculator()
 pose_estimator = PoseEstimator()
@@ -39,18 +40,18 @@ while True:
         print("Cannot read frame")
         break
 
-    h, w =image.shape[:2]
-
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     detections = detector.detect(gray)
 
     for detection in detections:
-        corners = detection.corners.astype(int)
+        corners_float = detection.corners.astype(float)
+        corners = corners_float.astype(int)
         center = detection.center.astype(int)
 
         for i in range(4):
             cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), 2)
-        cv2.circle(image, tuple(detection.center.astype(int)), 5, (0, 0, 25), -1)
+            cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
+        cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
         target_vectors = np.array()
 
@@ -79,6 +80,10 @@ while True:
             2
         )
 
+        corner_text = " ".join(
+            f"P{i + 1}={format_pose(pose)}"
+            for i, pose in enumerate(corner_poses)
+        )
         print(
             f"ID={detection.tag_id} "
             f"POSE=({apriltag_pose[0]}, {apriltag_pose[1]}, {apriltag_pose[2]})"
