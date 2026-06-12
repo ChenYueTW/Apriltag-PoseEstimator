@@ -2,7 +2,7 @@ import cv2
 import math
 import numpy as np
 from pupil_apriltags import Detector
-
+from pose_estimator import PoseEstimator
 from fps_caculator import FPSCaculator
 
 CALIB_FILE = "camera.calib.npz"
@@ -30,6 +30,7 @@ DISPLAY_SCALE = 0.5
 HORIZONTAL_FOV = 79.0
 
 fps_caculator = FPSCaculator()
+pose_estimator = PoseEstimator()
 
 while True:
     ret, image = cap.read()
@@ -51,31 +52,26 @@ while True:
             cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), 2)
         cv2.circle(image, tuple(detection.center.astype(int)), 5, (0, 0, 25), -1)
 
-        center_x = detection.center[0]
-        center_y = detection.center[1]
+        target_vectors = np.array()
 
-        # image center
-        point = np.array(
-            [[[center_x, center_y]]],
-            dtype=np.float32
-        )
+        for i in range(4):
+            corner_x = corners[i][0]
+            corner_y = corners[i][1]
 
-        normalized = cv2.undistortPoints(
-            point,
-            camera_matrix,
-            dist_coeffs
-        )
+            pose = pose_estimator.getTargetVectorFromPixel(corner_x, corner_y)
 
-        x = normalized[0][0][0]
-        y = normalized[0][0][1]
+            np.append(target_vectors, pose)
 
-        tx = math.degrees(math.atan(x))
-        ty = -math.degrees(math.atan(y))
+        # center_x = detection.center[0]
+        # center_y = detection.center[1]
+        # center_pose = pose_estimator.getTargetVectorFromPixel(center_x, center_y)
+        
+        # Apriltag pose
+        apriltag_pose = np.mean(pose_estimator.getApriltagPose(target_vectors))
 
-        # id & tx ty
         cv2.putText(
             image,
-            f"ID:{detection.tag_id} TX:{tx:.1f} TY:{ty:.1f}",
+            f"ID:{detection.tag_id} POSE:({apriltag_pose[0]}, {apriltag_pose[1]}, {apriltag_pose[2]})",
             (corners[0][0], corners[0][1] - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
@@ -85,8 +81,7 @@ while True:
 
         print(
             f"ID={detection.tag_id} "
-            f"tx={tx:.2f} "
-            f"ty={ty:.2f}"
+            f"POSE=({apriltag_pose[0]}, {apriltag_pose[1]}, {apriltag_pose[2]})"
         )
 
     fps_caculator.update()
