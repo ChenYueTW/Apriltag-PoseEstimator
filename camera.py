@@ -16,10 +16,10 @@ dist_coeffs = data["dist_coeffs"]
 # 提示：鎖定曝光（AUTO_EXPOSURE=False）並用較短曝光，可減少動態模糊、讓角點更穩。
 CAMERA_SETTINGS = {
     "auto_exposure": False,   # True=自動曝光, False=手動（才能套用下面的 exposure）
-    "exposure": 150,          # 手動曝光值（V4L2 單位，越小越暗/越不模糊；自動曝光時忽略）
-    "brightness": None,       # 亮度
+    "exposure": 900,          # 手動曝光值（V4L2 單位，越小越暗/越不模糊；自動曝光時忽略）
+    "brightness": 78,       # 亮度
     "contrast": None,         # 對比
-    "gain": None,             # 增益（拉高會變亮但雜訊增加）
+    "gain": 12,             # 增益（拉高會變亮但雜訊增加）
     "saturation": None,       # 飽和度
 }
 
