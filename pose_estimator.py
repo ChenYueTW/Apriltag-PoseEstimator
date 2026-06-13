@@ -15,14 +15,24 @@ class PoseEstimator:
         self.central_sight = self.rotation_matrix_from_axis_angle(np.array([0, 1, 0]), self.camera_pitch) @ np.array([1.0, 0.0, 0.0])
         self.camera_x_axis = np.cross(self.central_sight, np.array([0.0, 0.0, 1.0]))
         self.camera_y_axis = np.cross(self.camera_x_axis, self.central_sight)
-        self.apriltag_side_length = 0.1651
-        
-    def getTargetVector(self, tx, ty):
-        target_x = self.rotation_matrix_from_axis_angle(self.camera_y_axis, math.radians(-tx)) @ self.central_sight
-        target_y = self.rotation_matrix_from_axis_angle(self.camera_x_axis, math.radians(ty)) @ self.central_sight
-        target = np.cross(np.cross(self.camera_y_axis, target_x), np.cross(self.camera_x_axis, target_y))
 
-        return target
+        # 相機座標基底的單位向量（前方 / 右 / 上），用於直接反投影成歸一化射線
+        self.forward_hat = self.normalize(self.central_sight)
+        self.x_hat = self.normalize(self.camera_x_axis)
+        self.y_hat = self.normalize(self.camera_y_axis)
+
+        self.apriltag_side_length = 0.1651
+
+    def getTargetVector(self, tx, ty):
+        # 標準針孔反投影：方向 = 前方 + tan(方位角)·右 + tan(仰角)·上，再歸一化
+        # tan(tx)=x_n、tan(ty)=y_n 即去畸變後的歸一化影像座標
+        direction = (
+            self.forward_hat
+            + math.tan(math.radians(tx)) * self.x_hat
+            + math.tan(math.radians(ty)) * self.y_hat
+        )
+
+        return self.normalize(direction)
     
     def getTargetVectorFromPixel(self, x, y):
         point = np.array(
