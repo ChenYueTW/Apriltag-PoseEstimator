@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import math
 
-CALIB_FILE = "camera.calib.npz"
+CALIB_FILE = "chessboard.calib.npz"
 
 data = np.load(CALIB_FILE)
 camera_matrix = data["camera_matrix"]
@@ -15,7 +15,7 @@ class PoseEstimator:
         self.central_sight = self.rotation_matrix_from_axis_angle(np.array([0, 1, 0]), self.camera_pitch) @ np.array([1.0, 0.0, 0.0])
         self.camera_x_axis = np.cross(self.central_sight, np.array([0.0, 0.0, 1.0]))
         self.camera_y_axis = np.cross(self.camera_x_axis, self.central_sight)
-        self.apriltag_side_length = 0.1651
+        self.apriltag_side_length = 0.16
         
     def getTargetVector(self, tx, ty):
         target_x = self.rotation_matrix_from_axis_angle(self.camera_y_axis, math.radians(-tx)) @ self.central_sight

@@ -6,7 +6,7 @@ from pose_estimator import PoseEstimator
 from fps_caculator import FPSCaculator
 from pose_estimator import PoseEstimator
 
-CALIB_FILE = "camera.calib.npz"
+CALIB_FILE = "chessboard.calib.npz"
 
 data = np.load(CALIB_FILE)
 camera_matrix = data["camera_matrix"]
