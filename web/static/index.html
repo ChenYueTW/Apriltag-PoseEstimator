@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AprilTag Pose Estimator</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">▦</span>
+      <span>AprilTag Pose Estimator</span>
+    </div>
+    <div class="status" id="status-bar">
+      <span class="pill" id="pill-backend">backend: …</span>
+      <span class="pill" id="pill-fps">FPS: –</span>
+      <span class="pill" id="pill-tags">tags: 0</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="live">📷 即時影像 Live</button>
+    <button class="tab" data-tab="settings">⚙️ 鏡頭設定 Settings</button>
+    <button class="tab" data-tab="sim">🧊 3D 模擬 Simulation</button>
+    <button class="tab" data-tab="experiment">🧪 實驗 Experiment</button>
+  </nav>
+
+  <main>
+    <!-- ───────────────────────── Live ───────────────────────── -->
+    <section class="panel active" id="tab-live">
+      <div class="live-grid">
+        <div class="video-wrap">
+          <img id="video" src="/video_feed" alt="camera feed" />
+        </div>
+        <div class="info-card">
+          <h2>偵測到的 AprilTag</h2>
+          <div class="table-scroll">
+            <table id="detections-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>新方法 Pose (x, y, z)</th>
+                  <th>距離 (m)</th>
+                </tr>
+              </thead>
+              <tbody id="detections-body">
+                <tr class="empty"><td colspan="3">尚未偵測到 tag</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────────────── Settings ─────────────────────── -->
+    <section class="panel" id="tab-settings">
+      <div class="placeholder" id="settings-placeholder">鏡頭設定（Part 2）</div>
+    </section>
+
+    <!-- ───────────────────────── 3D ─────────────────────────── -->
+    <section class="panel" id="tab-sim">
+      <div class="placeholder" id="sim-placeholder">3D 模擬（Part 4）</div>
+    </section>
+
+    <!-- ─────────────────────── Experiment ───────────────────── -->
+    <section class="panel" id="tab-experiment">
+      <div class="placeholder" id="experiment-placeholder">實驗分頁（Part 5）</div>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/live.js"></script>
+</body>
+</html>
