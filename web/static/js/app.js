@@ -94,5 +94,7 @@ const App = (() => {
 
   document.addEventListener("DOMContentLoaded", init);
 
-  return { onState, getState, toast };
+  const api = { onState, getState, toast };
+  window.App = api; // expose for ES module scripts (sim3d.js)
+  return api;
 })();

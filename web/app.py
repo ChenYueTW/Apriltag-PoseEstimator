@@ -28,6 +28,7 @@ from camera_service import CameraService  # noqa: E402
 import settings_store  # noqa: E402
 
 app = Flask(__name__, static_folder=os.path.join(WEB, "static"), static_url_path="")
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # don't cache static assets (research tool)
 CORS(app)
 
 # Load persisted camera settings ("memory") and start the capture service with them.
@@ -62,6 +63,11 @@ def video_feed():
 @app.route("/api/state")
 def api_state():
     return jsonify(camera.get_state())
+
+
+@app.route("/api/scene")
+def api_scene():
+    return jsonify(camera.get_scene())
 
 
 @app.route("/api/settings", methods=["GET"])

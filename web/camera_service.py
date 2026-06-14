@@ -10,6 +10,7 @@ Windows dev box) it falls back to a synthetic "NO CAMERA" frame so the web UI
 still boots and can be developed against.
 """
 
+import math
 import os
 import sys
 import threading
@@ -282,3 +283,24 @@ class CameraService:
     def get_state(self):
         with self._lock:
             return dict(self._state)
+
+    def get_scene(self):
+        """Static scene description for the 3D view: camera extrinsics + intrinsics.
+
+        The world frame is Z-up; the camera sits at camera_pose looking along
+        forward, with x_axis (right) and y_axis (up) completing the basis.
+        """
+        pe = self.pose_estimator
+        K = self.camera_matrix
+        return {
+            "camera_pose": pe.camera_pose.tolist(),
+            "forward": pe.forward_hat.tolist(),
+            "x_axis": pe.x_hat.tolist(),
+            "y_axis": pe.y_hat.tolist(),
+            "pitch_deg": math.degrees(pe.camera_pitch),
+            "fx": float(K[0, 0]), "fy": float(K[1, 1]),
+            "cx": float(K[0, 2]), "cy": float(K[1, 2]),
+            "width": FRAME_WIDTH, "height": FRAME_HEIGHT,
+            "tag_size": float(self.ippe.tag_size),
+            "up": [0.0, 0.0, 1.0],
+        }
