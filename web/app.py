@@ -3,7 +3,7 @@
 Serves on port 3000:
   GET  /              -> single-page web UI (static/index.html)
   GET  /video_feed    -> MJPEG stream of the annotated camera frames
-  GET  /api/state     -> latest detection state (ids, novel pose, distance ...)
+  GET  /api/state     -> latest detection state (ids, novel pose, IPPE pose ...)
 
 Run from anywhere:  python web/app.py
 """

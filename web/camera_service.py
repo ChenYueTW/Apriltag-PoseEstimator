@@ -234,7 +234,6 @@ class CameraService:
                     corners_float[i][0], corners_float[i][1]
                 )
             novel = np.mean(self.pose_estimator.getApriltagPose(target_vectors), axis=0)
-            distance = float(np.linalg.norm(novel - cam_pose))
 
             # PnP / IPPE baseline, transformed into the same world frame.
             ippe = self.ippe.estimate(corners_float)
@@ -265,10 +264,8 @@ class CameraService:
                 "corners": corners_float.tolist(),
                 "center": [float(center[0]), float(center[1])],
                 "novel_pose": [float(novel[0]), float(novel[1]), float(novel[2])],
-                "distance": distance,
                 "ippe_pose": (None if ippe_world is None
                               else [float(ippe_world[0]), float(ippe_world[1]), float(ippe_world[2])]),
-                "ippe_distance": (None if ippe is None else float(ippe["distance"])),
                 "ippe_reproj_error": (None if ippe_reproj is None else float(ippe_reproj)),
                 "ippe_quat": ippe_quat,
             })
