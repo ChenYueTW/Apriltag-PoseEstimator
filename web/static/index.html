@@ -69,6 +69,15 @@
           <span class="hint" id="settings-status"></span>
         </div>
       </div>
+
+      <div class="card">
+        <h2>時間平滑 Temporal Smoothing</h2>
+        <p class="hint">對靜止的 tag 取多幀平均，降低估計抖動、提升精度（移動時會有延遲；幀數=1 等於關閉）。</p>
+        <form id="smoothing-form" class="form-grid"></form>
+        <div class="toolbar">
+          <span class="hint" id="smoothing-status"></span>
+        </div>
+      </div>
     </section>
 
     <!-- ───────────────────────── 3D ─────────────────────────── -->
@@ -148,6 +157,7 @@
   <script src="js/app.js"></script>
   <script src="js/live.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/smoothing.js"></script>
   <script src="js/experiment.js"></script>
   <script type="module" src="js/sim3d.js"></script>
 </body>

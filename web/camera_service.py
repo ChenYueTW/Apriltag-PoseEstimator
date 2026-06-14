@@ -30,6 +30,8 @@ from pnp_ippe_estimator import PnPIPPEEstimator  # noqa: E402
 from fps_caculator import FPSCaculator  # noqa: E402
 from detector import AprilTagDetector  # noqa: E402
 from settings_store import DEFAULTS as DEFAULT_SETTINGS  # noqa: E402
+from pose_smoother import PoseSmoother  # noqa: E402
+import smoothing_store  # noqa: E402
 
 try:
     from scipy.spatial.transform import Rotation as _Rotation
@@ -73,6 +75,7 @@ class CameraService:
         self.ippe = PnPIPPEEstimator(tag_size=self.pose_estimator.apriltag_side_length)
         self.detector = AprilTagDetector(families="tag36h11")
         self.fps = FPSCaculator()
+        self.smoother = PoseSmoother(**smoothing_store.load())
 
         # Transform from the camera optical frame (x right, y down, z forward) to
         # the world frame the novel PoseEstimator uses. Built so that an optical
@@ -148,6 +151,17 @@ class CameraService:
     def get_settings(self):
         with self._lock:
             return dict(self.settings)
+
+    def get_smoothing(self):
+        return self.smoother.get_config()
+
+    def apply_smoothing(self, config):
+        self.smoother.set_config(
+            enabled=config.get("enabled"),
+            window=config.get("window"),
+            method=config.get("method"),
+        )
+        return self.smoother.get_config()
 
     # ----------------------------------------------------------------- frames
     def _synthetic_frame(self):
@@ -252,9 +266,15 @@ class CameraService:
                     ippe["rvec"], ippe["tvec"], self.ippe.tag_size * 0.5, 2,
                 )
 
+            # Temporal smoothing per tag (reduces jitter for static tags).
+            novel_raw = [float(novel[0]), float(novel[1]), float(novel[2])]
+            ippe_raw = (None if ippe_world is None
+                        else [float(ippe_world[0]), float(ippe_world[1]), float(ippe_world[2])])
+            novel_s, ippe_s = self.smoother.update(det.tag_id, novel_raw, ippe_raw)
+
             cv2.putText(
                 image,
-                f"ID:{det.tag_id} N({novel[0]:.2f},{novel[1]:.2f},{novel[2]:.2f})",
+                f"ID:{det.tag_id} N({novel_s[0]:.2f},{novel_s[1]:.2f},{novel_s[2]:.2f})",
                 (corners[0][0], corners[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2,
             )
@@ -263,9 +283,8 @@ class CameraService:
                 "id": int(det.tag_id),
                 "corners": corners_float.tolist(),
                 "center": [float(center[0]), float(center[1])],
-                "novel_pose": [float(novel[0]), float(novel[1]), float(novel[2])],
-                "ippe_pose": (None if ippe_world is None
-                              else [float(ippe_world[0]), float(ippe_world[1]), float(ippe_world[2])]),
+                "novel_pose": novel_s,
+                "ippe_pose": ippe_s,
                 "ippe_reproj_error": (None if ippe_reproj is None else float(ippe_reproj)),
                 "ippe_quat": ippe_quat,
             })

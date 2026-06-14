@@ -26,6 +26,7 @@ from flask_cors import CORS  # noqa: E402
 
 from camera_service import CameraService  # noqa: E402
 import settings_store  # noqa: E402
+import smoothing_store  # noqa: E402
 from experiment_store import ExperimentStore  # noqa: E402
 
 app = Flask(__name__, static_folder=os.path.join(WEB, "static"), static_url_path="")
@@ -99,6 +100,19 @@ def api_post_settings():
     camera.apply_settings(data)
     saved = settings_store.save(camera.get_settings())
     return jsonify({"settings": saved, "spec": settings_store.SPEC})
+
+
+@app.route("/api/smoothing", methods=["GET"])
+def api_get_smoothing():
+    return jsonify({"config": camera.get_smoothing(), "spec": smoothing_store.SPEC})
+
+
+@app.route("/api/smoothing", methods=["POST"])
+def api_post_smoothing():
+    data = request.get_json(force=True, silent=True) or {}
+    camera.apply_smoothing(data)
+    saved = smoothing_store.save(camera.get_smoothing())
+    return jsonify({"config": saved, "spec": smoothing_store.SPEC})
 
 
 # --------------------------------------------------------------- experiments

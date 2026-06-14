@@ -3,4 +3,5 @@ __pycache__/
 
 # Web runtime artifacts
 web/camera_settings.json
+web/smoothing.json
 web/experiments/*.csv
