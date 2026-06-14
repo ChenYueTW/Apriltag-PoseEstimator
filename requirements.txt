@@ -1,0 +1,11 @@
+# AprilTag Pose Estimator - dependencies
+flask>=3.0
+flask-cors>=4.0
+opencv-python>=4.8
+numpy>=1.24
+scipy>=1.10
+
+# Optional, preferred AprilTag backend on the Linux deployment machine.
+# If it is not installed the detector automatically falls back to the
+# OpenCV aruco (DICT_APRILTAG_36h11) detector.
+pupil-apriltags>=1.0.4

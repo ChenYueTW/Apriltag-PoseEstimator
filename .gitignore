@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+
+# Web runtime artifacts
+web/camera_settings.json
+web/experiments/*.csv

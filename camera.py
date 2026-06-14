@@ -1,10 +1,16 @@
+import os
+import sys
+
 import cv2
 import math
 import numpy as np
 from pupil_apriltags import Detector
 from pose_estimator import PoseEstimator
 from fps_caculator import FPSCaculator
-from pose_estimator import PoseEstimator
+
+# 與網頁共用同一份鏡頭設定來源（web/camera_settings.json）
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "web"))
+from settings_store import load as load_camera_settings
 
 CALIB_FILE = "chessboard.calib.npz"
 
@@ -12,16 +18,11 @@ data = np.load(CALIB_FILE)
 camera_matrix = data["camera_matrix"]
 dist_coeffs = data["dist_coeffs"]
 
-# ───── 鏡頭設定（None = 不設定、沿用驅動預設）─────
-# 提示：鎖定曝光（AUTO_EXPOSURE=False）並用較短曝光，可減少動態模糊、讓角點更穩。
-CAMERA_SETTINGS = {
-    "auto_exposure": False,   # True=自動曝光, False=手動（才能套用下面的 exposure）
-    "exposure": 900,          # 手動曝光值（V4L2 單位，越小越暗/越不模糊；自動曝光時忽略）
-    "brightness": 78,       # 亮度
-    "contrast": 24,         # 對比
-    "gain": 12,             # 增益（拉高會變亮但雜訊增加）
-    "saturation": None,       # 飽和度
-}
+# ───── 鏡頭設定（統一設定來源）─────
+# 讀取與網頁相同的 web/camera_settings.json（檔案不存在時用內建預設值）。
+# 在網頁調整並儲存後，重新執行 camera.py 就會套用到相同的設定。
+# 註：下方的拉條（Settings 視窗）仍可即時微調，但那些變動只在本次執行有效、不會寫回檔案。
+CAMERA_SETTINGS = load_camera_settings()
 
 # Camera
 cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
