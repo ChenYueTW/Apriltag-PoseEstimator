@@ -77,9 +77,19 @@ const App = (() => {
     toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
   }
 
+  // Attach MJPEG streams only after the document has loaded, so a never-ending
+  // multipart stream does not block the page 'load' event (also helps tooling).
+  function attachStreams() {
+    document.querySelectorAll("img.mjpeg[data-src]").forEach((img) => {
+      img.src = img.dataset.src;
+    });
+  }
+
   function init() {
     initTabs();
     poll();
+    if (document.readyState === "complete") attachStreams();
+    else window.addEventListener("load", attachStreams);
   }
 
   document.addEventListener("DOMContentLoaded", init);

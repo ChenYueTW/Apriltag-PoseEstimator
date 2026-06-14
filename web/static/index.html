@@ -31,7 +31,7 @@
     <section class="panel active" id="tab-live">
       <div class="live-grid">
         <div class="video-wrap">
-          <img id="video" src="/video_feed" alt="camera feed" />
+          <img id="video" class="mjpeg" data-src="/video_feed" alt="camera feed" />
         </div>
         <div class="info-card">
           <h2>偵測到的 AprilTag</h2>
@@ -55,7 +55,23 @@
 
     <!-- ─────────────────────── Settings ─────────────────────── -->
     <section class="panel" id="tab-settings">
-      <div class="placeholder" id="settings-placeholder">鏡頭設定（Part 2）</div>
+      <div class="settings-grid">
+        <div class="card">
+          <h2>鏡頭設定 Camera Settings</h2>
+          <p class="hint">調整後即時套用並自動儲存，重新啟動後會記住上次設定。</p>
+          <form id="settings-form" class="form-grid"></form>
+          <div class="toolbar">
+            <button type="button" class="btn secondary" id="settings-reset">重設為預設值 Reset</button>
+            <span class="hint" id="settings-status"></span>
+          </div>
+        </div>
+        <div class="card">
+          <h2>預覽 Preview</h2>
+          <div class="video-wrap">
+            <img id="settings-video" class="mjpeg" data-src="/video_feed" alt="camera feed" />
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ───────────────────────── 3D ─────────────────────────── -->
@@ -71,5 +87,6 @@
 
   <script src="js/app.js"></script>
   <script src="js/live.js"></script>
+  <script src="js/settings.js"></script>
 </body>
 </html>

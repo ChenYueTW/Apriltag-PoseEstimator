@@ -21,15 +21,17 @@ for path in (ROOT, WEB):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from flask import Flask, Response, jsonify, send_from_directory  # noqa: E402
+from flask import Flask, Response, jsonify, request, send_from_directory  # noqa: E402
 from flask_cors import CORS  # noqa: E402
 
 from camera_service import CameraService  # noqa: E402
+import settings_store  # noqa: E402
 
 app = Flask(__name__, static_folder=os.path.join(WEB, "static"), static_url_path="")
 CORS(app)
 
-camera = CameraService(camera_id=0)
+# Load persisted camera settings ("memory") and start the capture service with them.
+camera = CameraService(camera_id=0, settings=settings_store.load())
 camera.start()
 
 
@@ -60,6 +62,19 @@ def video_feed():
 @app.route("/api/state")
 def api_state():
     return jsonify(camera.get_state())
+
+
+@app.route("/api/settings", methods=["GET"])
+def api_get_settings():
+    return jsonify({"settings": camera.get_settings(), "spec": settings_store.SPEC})
+
+
+@app.route("/api/settings", methods=["POST"])
+def api_post_settings():
+    data = request.get_json(force=True, silent=True) or {}
+    camera.apply_settings(data)
+    saved = settings_store.save(camera.get_settings())
+    return jsonify({"settings": saved, "spec": settings_store.SPEC})
 
 
 if __name__ == "__main__":

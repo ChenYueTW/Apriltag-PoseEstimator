@@ -18,13 +18,16 @@ import time
 import cv2
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+WEB = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(WEB)
+for _p in (WEB, ROOT):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from pose_estimator import PoseEstimator  # noqa: E402
 from fps_caculator import FPSCaculator  # noqa: E402
 from detector import AprilTagDetector  # noqa: E402
+from settings_store import DEFAULTS as DEFAULT_SETTINGS  # noqa: E402
 
 CALIB_FILE = os.path.join(ROOT, "chessboard.calib.npz")
 
@@ -36,15 +39,7 @@ STREAM_SCALE = 0.5  # downscale the streamed frame to save bandwidth
 
 SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-# Default camera settings, same spirit as camera.py CAMERA_SETTINGS.
-DEFAULT_SETTINGS = {
-    "auto_exposure": False,
-    "exposure": 900,
-    "brightness": 78,
-    "contrast": 24,
-    "gain": 12,
-    "saturation": None,
-}
+# DEFAULT_SETTINGS is imported from settings_store (single source of truth).
 
 PROP_MAP = {
     "exposure": cv2.CAP_PROP_EXPOSURE,
@@ -88,10 +83,17 @@ class CameraService:
 
     # ------------------------------------------------------------------ camera
     def _open_camera(self):
-        """Open the camera, preferring V4L2 (Linux deploy) then any backend."""
+        """Open the camera, preferring V4L2 (Linux deploy) then any backend.
+
+        On Linux V4L2 is tried first and succeeds. On the Windows dev box V4L2
+        fails, so DSHOW is tried next (MSMF / CAP_ANY can stall at <1 fps with
+        this MJPG config); CAP_ANY is the final fallback.
+        """
         backends = []
         if hasattr(cv2, "CAP_V4L2"):
             backends.append(cv2.CAP_V4L2)
+        if sys.platform.startswith("win") and hasattr(cv2, "CAP_DSHOW"):
+            backends.append(cv2.CAP_DSHOW)
         backends.append(cv2.CAP_ANY)
 
         for backend in backends:
