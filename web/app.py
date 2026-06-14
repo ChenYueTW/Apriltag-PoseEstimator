@@ -26,6 +26,7 @@ from flask_cors import CORS  # noqa: E402
 
 from camera_service import CameraService  # noqa: E402
 import settings_store  # noqa: E402
+from experiment_store import ExperimentStore  # noqa: E402
 
 app = Flask(__name__, static_folder=os.path.join(WEB, "static"), static_url_path="")
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0  # don't cache static assets (research tool)
@@ -34,6 +35,8 @@ CORS(app)
 # Load persisted camera settings ("memory") and start the capture service with them.
 camera = CameraService(camera_id=0, settings=settings_store.load())
 camera.start()
+
+experiments = ExperimentStore()
 
 
 @app.route("/")
@@ -81,6 +84,59 @@ def api_post_settings():
     camera.apply_settings(data)
     saved = settings_store.save(camera.get_settings())
     return jsonify({"settings": saved, "spec": settings_store.SPEC})
+
+
+# --------------------------------------------------------------- experiments
+@app.route("/api/experiment/record", methods=["POST"])
+def api_experiment_record():
+    data = request.get_json(force=True, silent=True) or {}
+    tag_id = data.get("tag_id")
+    actual = data.get("actual")
+    if tag_id is None or not isinstance(actual, list) or len(actual) != 3:
+        return jsonify({"error": "tag_id and actual [x, y, z] are required"}), 400
+
+    # Snapshot the current estimate for this tag at button-press time.
+    state = camera.get_state()
+    det = next((d for d in state.get("detections", []) if d["id"] == int(tag_id)), None)
+    if det is None:
+        return jsonify({"error": f"tag {tag_id} is not currently detected"}), 404
+
+    rec = experiments.add(
+        tag_id=int(tag_id),
+        actual=actual,
+        novel=det.get("novel_pose"),
+        ippe=det.get("ippe_pose"),
+        ippe_reproj_error=det.get("ippe_reproj_error"),
+    )
+    return jsonify(rec)
+
+
+@app.route("/api/experiment/records", methods=["GET"])
+def api_experiment_list():
+    return jsonify(experiments.list())
+
+
+@app.route("/api/experiment/records", methods=["DELETE"])
+def api_experiment_clear():
+    experiments.clear()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/experiment/record/<int:index>", methods=["DELETE"])
+def api_experiment_delete(index):
+    experiments.delete(index)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/experiment/export.csv")
+def api_experiment_export():
+    csv_text = experiments.to_csv()
+    experiments.save_csv()  # keep a server-side copy under web/experiments/
+    return Response(
+        "﻿" + csv_text,  # BOM so Excel reads UTF-8 correctly
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=experiment.csv"},
+    )
 
 
 if __name__ == "__main__":

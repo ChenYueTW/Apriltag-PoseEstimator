@@ -80,6 +80,9 @@ const App = (() => {
   // Attach MJPEG streams only after the document has loaded, so a never-ending
   // multipart stream does not block the page 'load' event (also helps tooling).
   function attachStreams() {
+    // ?nostream disables the live MJPEG (useful for screenshots / debugging,
+    // where a never-ending stream blocks the page from going network-idle).
+    if (new URLSearchParams(location.search).has("nostream")) return;
     document.querySelectorAll("img.mjpeg[data-src]").forEach((img) => {
       img.src = img.dataset.src;
     });
