@@ -86,12 +86,19 @@ function buildCameraGizmo(s) {
   const xax = v3(s.x_axis).normalize();
   const yax = v3(s.y_axis).normalize();
 
-  // Camera body
+  // Camera body, oriented to the camera basis (right=x_hat, up=y_hat,
+  // depth=forward) so it visibly tilts up by the pitch. Elongated along the
+  // forward axis so the tilt is obvious.
   const body = new THREE.Mesh(
-    new THREE.BoxGeometry(0.05, 0.05, 0.05),
+    new THREE.BoxGeometry(0.06, 0.045, 0.10),
     new THREE.MeshStandardMaterial({ color: COLOR_CAM })
   );
   body.position.copy(apex);
+  // The camera basis (right, up, forward) is left-handed, so build a proper
+  // right-handed rotation (right' = up x forward) for a valid quaternion;
+  // local +Z then points along forward (tilted up by the pitch).
+  const bodyRight = new THREE.Vector3().crossVectors(yax, fwd).normalize();
+  body.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(bodyRight, yax, fwd));
   group.add(body);
 
   // Frustum: rays through the 4 image corners, length L.
@@ -263,11 +270,28 @@ if (window.App) window.App.onState(updateTags);
 // Pass a state object to inject it through updateTags() for testing.
 window.__sim = (injectState) => {
   if (injectState) updateTags(injectState);
+  // Camera body forward direction (local +Z in world) – should match forward_hat.
+  let bodyForward = null;
+  if (scene) {
+    const gizmo = scene.children.find(
+      (c) => c.isGroup && c.children.some((x) => x.isMesh && x.geometry.type === "BoxGeometry")
+    );
+    const body = gizmo && gizmo.children.find((x) => x.isMesh && x.geometry.type === "BoxGeometry");
+    if (body) {
+      const q = body.quaternion;
+      bodyForward = [
+        2 * (q.x * q.z + q.w * q.y),
+        2 * (q.y * q.z - q.w * q.x),
+        1 - 2 * (q.x * q.x + q.y * q.y),
+      ];
+    }
+  }
   return {
     inited,
     sceneLoaded: !!sceneData,
     sceneChildren: scene ? scene.children.length : 0,
     tags: tagObjs.size,
     hasCanvas: !!(container && container.querySelector("canvas")),
+    bodyForward,
   };
 };
