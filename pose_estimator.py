@@ -54,19 +54,43 @@ class PoseEstimator:
 
         return self.getTargetVector(tx, ty)
     
-    def getApriltagPose(self, target_vectors):
-        # Get A
+    def getApriltagPose(self, target_vectors, center_vector=None):
+        # 角點射線：P_i = camera_pose + (lambda * A_i) * v_i，A_i 為相對深度。
         v1 = target_vectors[0]
         v2 = target_vectors[1]
         v3 = target_vectors[2]
         v4 = target_vectors[3]
 
-        B = np.array([[v1[0], -v2[0], v3[0]],
-                      [v1[1], -v2[1], v3[1]],
-                      [v1[2], -v2[2], v3[2]]])
+        if center_vector is None:
+            # 原方法：僅用四角共面（平行四邊形）約束 P1 - P2 + P3 - P4 = 0，
+            # 3x3 恰定解，對像素雜訊敏感（抖動大）。
+            B = np.array([[v1[0], -v2[0], v3[0]],
+                          [v1[1], -v2[1], v3[1]],
+                          [v1[2], -v2[2], v3[2]]])
 
-        A = np.linalg.inv(B) @ v4
-        A = np.append(A, 1)
+            A = np.linalg.inv(B) @ v4
+            A = np.append(A, 1)
+        else:
+            # （選用）加入中心射線當作額外方程，以最小平方解超定系統。
+            # 注意：只有當中心是「獨立且更精準」的量測時才會提升精度；若中心由
+            # 四角推導（對角線交點 / 角點平均，多數偵測器如此），對平面四邊形而言
+            # 中心 = 兩對角線交點，完全由四角決定，屬冗餘資訊，無法降低雜訊。
+            # 未知數 x = [A0, A1, A2, dc']，A3 固定為 1 當尺度基準。
+            #   平行四邊形：A0 v1 - A1 v2 + A2 v3            = v4
+            #   中心點    ：A0 v1 + A1 v2 + A2 v3 - 4 dc' vc = -v4
+            # （中心 C = (P1+P2+P3+P4)/4 同時落在中心射線 vc 上）
+            vc = center_vector
+            M = np.array([
+                [v1[0], -v2[0], v3[0], 0.0],
+                [v1[1], -v2[1], v3[1], 0.0],
+                [v1[2], -v2[2], v3[2], 0.0],
+                [v1[0],  v2[0], v3[0], -4.0 * vc[0]],
+                [v1[1],  v2[1], v3[1], -4.0 * vc[1]],
+                [v1[2],  v2[2], v3[2], -4.0 * vc[2]],
+            ])
+            b = np.array([v4[0], v4[1], v4[2], -v4[0], -v4[1], -v4[2]])
+            sol, *_ = np.linalg.lstsq(M, b, rcond=None)
+            A = np.array([sol[0], sol[1], sol[2], 1.0])
 
         # Caculate lambda
         l1 = np.linalg.norm(A[1] * v2 - A[0] * v1)

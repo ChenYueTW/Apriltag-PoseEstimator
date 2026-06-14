@@ -227,7 +227,7 @@ class CameraService:
                 cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
             cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
-            # Novel pose-estimation method (world frame), exactly as in camera.py.
+            # Novel pose-estimation method (world frame).
             target_vectors = np.zeros((4, 3))
             for i in range(4):
                 target_vectors[i] = self.pose_estimator.getTargetVectorFromPixel(
