@@ -25,9 +25,15 @@ for _p in (WEB, ROOT):
         sys.path.insert(0, _p)
 
 from pose_estimator import PoseEstimator  # noqa: E402
+from pnp_ippe_estimator import PnPIPPEEstimator  # noqa: E402
 from fps_caculator import FPSCaculator  # noqa: E402
 from detector import AprilTagDetector  # noqa: E402
 from settings_store import DEFAULTS as DEFAULT_SETTINGS  # noqa: E402
+
+try:
+    from scipy.spatial.transform import Rotation as _Rotation
+except Exception:  # pragma: no cover
+    _Rotation = None
 
 CALIB_FILE = os.path.join(ROOT, "chessboard.calib.npz")
 
@@ -63,8 +69,16 @@ class CameraService:
         self.dist_coeffs = data["dist_coeffs"]
 
         self.pose_estimator = PoseEstimator()
+        self.ippe = PnPIPPEEstimator(tag_size=self.pose_estimator.apriltag_side_length)
         self.detector = AprilTagDetector(families="tag36h11")
         self.fps = FPSCaculator()
+
+        # Transform from the camera optical frame (x right, y down, z forward) to
+        # the world frame the novel PoseEstimator uses. Built so that an optical
+        # ray (x_n, y_n, 1) maps to forward + x_n*x_hat - y_n*y_hat, which is
+        # exactly the ray the novel method builds -> both methods share one frame.
+        pe = self.pose_estimator
+        self.R_cam_to_world = np.column_stack([pe.x_hat, -pe.y_hat, pe.forward_hat])
 
         self.cap = None
         self.synthetic = True
@@ -221,9 +235,26 @@ class CameraService:
             novel = np.mean(self.pose_estimator.getApriltagPose(target_vectors), axis=0)
             distance = float(np.linalg.norm(novel - cam_pose))
 
+            # PnP / IPPE baseline, transformed into the same world frame.
+            ippe = self.ippe.estimate(corners_float)
+            ippe_world = None
+            ippe_reproj = None
+            ippe_quat = None
+            if ippe is not None:
+                ippe_world = cam_pose + self.R_cam_to_world @ ippe["tvec"]
+                ippe_reproj = ippe["reproj_error"]
+                if _Rotation is not None:
+                    R_world = self.R_cam_to_world @ ippe["R"]
+                    ippe_quat = _Rotation.from_matrix(R_world).as_quat().tolist()
+                # Draw the tag axes from the IPPE solution.
+                cv2.drawFrameAxes(
+                    image, self.ippe.camera_matrix, self.ippe.dist_coeffs,
+                    ippe["rvec"], ippe["tvec"], self.ippe.tag_size * 0.5, 2,
+                )
+
             cv2.putText(
                 image,
-                f"ID:{det.tag_id} ({novel[0]:.2f},{novel[1]:.2f},{novel[2]:.2f})",
+                f"ID:{det.tag_id} N({novel[0]:.2f},{novel[1]:.2f},{novel[2]:.2f})",
                 (corners[0][0], corners[0][1] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2,
             )
@@ -234,6 +265,11 @@ class CameraService:
                 "center": [float(center[0]), float(center[1])],
                 "novel_pose": [float(novel[0]), float(novel[1]), float(novel[2])],
                 "distance": distance,
+                "ippe_pose": (None if ippe_world is None
+                              else [float(ippe_world[0]), float(ippe_world[1]), float(ippe_world[2])]),
+                "ippe_distance": (None if ippe is None else float(ippe["distance"])),
+                "ippe_reproj_error": (None if ippe_reproj is None else float(ippe_reproj)),
+                "ippe_quat": ippe_quat,
             })
 
         return image, out
