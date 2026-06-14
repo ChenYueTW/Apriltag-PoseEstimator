@@ -116,12 +116,10 @@ function buildCameraGizmo(s) {
   const frustum = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat);
   group.add(frustum);
 
-  // Optical axis (central sight) line.
-  const axisPts = [apex.clone(), apex.clone().add(fwd.clone().multiplyScalar(L * 1.3))];
-  group.add(new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints(axisPts),
-    new THREE.LineDashedMaterial({ color: 0x8b98a5 })
-  ));
+  // Forward (optical axis, blue) and up (green) arrows, so the camera's
+  // orientation - including that it tilts upward by the pitch - is unmistakable.
+  group.add(new THREE.ArrowHelper(fwd, apex, L * 1.3, 0x58a6ff, 0.08, 0.05));
+  group.add(new THREE.ArrowHelper(yax, apex, 0.30, 0x3fb950, 0.07, 0.045));
 
   scene.add(group);
 }
@@ -165,11 +163,14 @@ function createTagObj(id) {
   );
   group.add(novel);
 
-  // IPPE oriented plate
+  // IPPE oriented plate, textured with the actual AprilTag id image.
   const ippe = new THREE.Group();
+  const tex = new THREE.TextureLoader().load(`/api/tag_image/${id}.png`);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter;  // crisp tag pixels
   const plate = new THREE.Mesh(
     new THREE.PlaneGeometry(tagSize, tagSize),
-    new THREE.MeshStandardMaterial({ color: COLOR_IPPE, transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })
   );
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.PlaneGeometry(tagSize, tagSize)),

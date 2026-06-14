@@ -73,6 +73,21 @@ def api_scene():
     return jsonify(camera.get_scene())
 
 
+@app.route("/api/tag_image/<int:tag_id>.png")
+def api_tag_image(tag_id):
+    """Render the tag36h11 marker image for a given id (used as the 3D plate texture)."""
+    import cv2
+    try:
+        dic = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
+        img = cv2.aruco.generateImageMarker(dic, tag_id, 256)
+    except Exception:
+        return jsonify({"error": f"invalid tag id {tag_id}"}), 404
+    ok, buf = cv2.imencode(".png", img)
+    if not ok:
+        return jsonify({"error": "encode failed"}), 500
+    return Response(buf.tobytes(), mimetype="image/png")
+
+
 @app.route("/api/settings", methods=["GET"])
 def api_get_settings():
     return jsonify({"settings": camera.get_settings(), "spec": settings_store.SPEC})

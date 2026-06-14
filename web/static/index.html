@@ -28,8 +28,7 @@
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="live">📷 即時影像 Live</button>
-    <button class="tab" data-tab="settings">⚙️ 鏡頭設定 Settings</button>
+    <button class="tab active" data-tab="live">📷 即時影像 + 鏡頭設定</button>
     <button class="tab" data-tab="sim">🧊 3D 模擬 Simulation</button>
     <button class="tab" data-tab="experiment">🧪 實驗 Experiment</button>
   </nav>
@@ -61,25 +60,14 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <!-- ─────────────────────── Settings ─────────────────────── -->
-    <section class="panel" id="tab-settings">
-      <div class="settings-grid">
-        <div class="card">
-          <h2>鏡頭設定 Camera Settings</h2>
-          <p class="hint">調整後即時套用並自動儲存，重新啟動後會記住上次設定。</p>
-          <form id="settings-form" class="form-grid"></form>
-          <div class="toolbar">
-            <button type="button" class="btn secondary" id="settings-reset">重設為預設值 Reset</button>
-            <span class="hint" id="settings-status"></span>
-          </div>
-        </div>
-        <div class="card">
-          <h2>預覽 Preview</h2>
-          <div class="video-wrap">
-            <img id="settings-video" class="mjpeg" data-src="/video_feed" alt="camera feed" />
-          </div>
+      <div class="card">
+        <h2>鏡頭設定 Camera Settings</h2>
+        <p class="hint">調整後即時套用並自動儲存，重新啟動後會記住上次設定。</p>
+        <form id="settings-form" class="form-grid"></form>
+        <div class="toolbar">
+          <button type="button" class="btn secondary" id="settings-reset">重設為預設值 Reset</button>
+          <span class="hint" id="settings-status"></span>
         </div>
       </div>
     </section>
@@ -89,9 +77,9 @@
       <div class="sim-wrap">
         <div id="sim-canvas"></div>
         <div class="sim-legend">
-          <div class="legend-row"><span class="swatch cam"></span>相機 Camera + 視錐</div>
+          <div class="legend-row"><span class="swatch cam"></span>相機 Camera + 視錐（藍箭頭=朝向, 綠箭頭=上）</div>
           <div class="legend-row"><span class="swatch novel"></span>新方法 Novel pose</div>
-          <div class="legend-row"><span class="swatch ippe"></span>PnP IPPE pose + 朝向</div>
+          <div class="legend-row"><span class="swatch ippe"></span>PnP IPPE pose（AprilTag 圖片）</div>
           <div class="legend-hint">滑鼠左鍵旋轉 · 右鍵平移 · 滾輪縮放</div>
           <div class="legend-hint" id="sim-status">載入中…</div>
         </div>

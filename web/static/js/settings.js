@@ -158,9 +158,10 @@
 
   resetBtn.addEventListener("click", reset);
 
-  // Load when the settings tab is first shown (and once on startup).
+  // Settings now live on the merged "live" tab; refresh when it is shown, and
+  // once on startup.
   document.addEventListener("tabchange", (e) => {
-    if (e.detail === "settings") fetchSettings();
+    if (e.detail === "live") fetchSettings();
   });
   fetchSettings();
 })();
