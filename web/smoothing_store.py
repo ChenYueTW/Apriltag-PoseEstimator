@@ -12,8 +12,8 @@ CONFIG_FILE = os.path.join(WEB, "smoothing.json")
 
 DEFAULTS = {
     "enabled": True,
-    "window": 60,      # EMA effective memory (α = 2/(window+1)); 60 frames ≈ 1.7s at 35fps
-    "method": "ema",   # "mean", "median", or "ema"
+    "window": 60,            # used by mean/median/ema; ignored by cumulative
+    "method": "cumulative",  # "mean", "median", "ema", or "cumulative"
 }
 
 SPEC = {
@@ -23,7 +23,9 @@ SPEC = {
         "label": "平均幀數 Window (frames)", "disabled_when_off": "enabled",
     },
     "method": {
-        "type": "choice", "options": ["mean", "median", "ema"],
+        # cumulative = running mean over all frames since acquisition; best for a
+        # static tag (averages out the novel method's slow drift → true centre).
+        "type": "choice", "options": ["mean", "median", "ema", "cumulative"],
         "label": "方式 Method", "disabled_when_off": "enabled",
     },
 }

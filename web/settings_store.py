@@ -16,10 +16,10 @@ SETTINGS_FILE = os.path.join(WEB, "camera_settings.json")
 # Single source of truth for the camera settings (same spirit as camera.py).
 DEFAULTS = {
     "auto_exposure": False,
-    "exposure": 1700,   # empirically optimal (post-AWB-fix): reliable detection + stable corners
+    "exposure": 1300,   # empirically optimal (AWB on): both methods' long-term means land ~+5-6mm of 1.922m ground truth
     "brightness": 0,    # neutral; let exposure control brightness
     "contrast": 64,     # sharper tag edges → better subpixel corner localisation
-    "gain": 16,         # minimum gain to avoid amplifying electronic noise
+    "gain": 30,         # raised from 16: shifts IPPE onto target and keeps the tag detectable at the lower exposure
     "saturation": None,
 }
 
