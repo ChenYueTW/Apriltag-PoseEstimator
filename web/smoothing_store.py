@@ -12,14 +12,14 @@ CONFIG_FILE = os.path.join(WEB, "smoothing.json")
 
 DEFAULTS = {
     "enabled": True,
-    "window": 30,      # EMA effective memory (α = 2/(window+1))
+    "window": 60,      # EMA effective memory (α = 2/(window+1)); 60 frames ≈ 1.7s at 35fps
     "method": "ema",   # "mean", "median", or "ema"
 }
 
 SPEC = {
     "enabled": {"type": "bool", "label": "啟用時間平滑 Temporal smoothing"},
     "window": {
-        "type": "number", "min": 1, "max": 30, "step": 1,
+        "type": "number", "min": 1, "max": 100, "step": 1,
         "label": "平均幀數 Window (frames)", "disabled_when_off": "enabled",
     },
     "method": {
