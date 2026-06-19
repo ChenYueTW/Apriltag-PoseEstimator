@@ -130,6 +130,9 @@ class CameraService:
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
                 cap.set(cv2.CAP_PROP_FPS, FRAME_FPS)
+                # Disable auto white balance so AWB state changes don't shift corner
+                # detection positions when exposure changes (affects both methods).
+                cap.set(cv2.CAP_PROP_AUTO_WB, 0)
                 self.cap = cap
                 self.synthetic = False
                 self.apply_settings(self.settings)
@@ -151,6 +154,9 @@ class CameraService:
 
         if s.get("auto_exposure") is not None:
             self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3 if s["auto_exposure"] else 1)
+            # V4L2 cameras need a moment to switch between auto/manual modes before
+            # the exposure value is accepted; without this the setting is silently ignored.
+            time.sleep(0.15)
         for key, prop in PROP_MAP.items():
             if key == "exposure" and s.get("auto_exposure"):
                 continue

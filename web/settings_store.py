@@ -16,7 +16,7 @@ SETTINGS_FILE = os.path.join(WEB, "camera_settings.json")
 # Single source of truth for the camera settings (same spirit as camera.py).
 DEFAULTS = {
     "auto_exposure": False,
-    "exposure": 1450,   # empirically optimal: reliable detection + stable corner localisation
+    "exposure": 1700,   # empirically optimal (post-AWB-fix): reliable detection + stable corners
     "brightness": 0,    # neutral; let exposure control brightness
     "contrast": 64,     # sharper tag edges → better subpixel corner localisation
     "gain": 16,         # minimum gain to avoid amplifying electronic noise
