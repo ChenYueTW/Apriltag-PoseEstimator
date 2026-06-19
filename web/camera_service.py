@@ -130,14 +130,18 @@ class CameraService:
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
                 cap.set(cv2.CAP_PROP_FPS, FRAME_FPS)
-                # Disable auto white balance so AWB state changes don't shift corner
-                # detection positions when exposure changes (affects both methods).
-                cap.set(cv2.CAP_PROP_AUTO_WB, 0)
                 self.cap = cap
                 self.synthetic = False
+                # Prime the camera: read a batch of frames to start the ISP,
+                # then apply settings. On V4L2/UVC cameras the sensor must be
+                # actively capturing before exposure and AWB changes are accepted
+                # by the firmware. Without this the camera runs at its default
+                # speed (~120 fps with auto exposure) even when manual is requested.
+                for _ in range(30):
+                    cap.read()
+                cap.set(cv2.CAP_PROP_AUTO_WB, 0)
                 self.apply_settings(self.settings)
-                # Discard initial frames so that the new exposure setting takes
-                # effect before the capture loop starts producing pose estimates.
+                # Flush post-settings frames so pose estimates use the new exposure.
                 for _ in range(60):
                     cap.read()
                 return True
