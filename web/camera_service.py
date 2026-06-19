@@ -136,6 +136,10 @@ class CameraService:
                 self.cap = cap
                 self.synthetic = False
                 self.apply_settings(self.settings)
+                # Discard initial frames so that the new exposure setting takes
+                # effect before the capture loop starts producing pose estimates.
+                for _ in range(60):
+                    cap.read()
                 return True
             cap.release()
 
