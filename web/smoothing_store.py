@@ -12,8 +12,8 @@ CONFIG_FILE = os.path.join(WEB, "smoothing.json")
 
 DEFAULTS = {
     "enabled": True,
-    "window": 10,      # frames averaged per tag
-    "method": "mean",  # "mean" or "median"
+    "window": 20,      # EMA effective memory (α = 2/(window+1))
+    "method": "ema",   # "mean", "median", or "ema"
 }
 
 SPEC = {

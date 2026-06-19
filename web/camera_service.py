@@ -15,6 +15,7 @@ import os
 import sys
 import threading
 import time
+from collections import deque
 
 import cv2
 import numpy as np
@@ -48,6 +49,13 @@ STREAM_SCALE = 0.5  # downscale the streamed frame to save bandwidth
 
 SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
+# Per-tag corner pre-smoothing: average the last N refined corner positions before
+# feeding them into the bearing-ray / linear-solve estimator. This reduces pixel
+# noise BEFORE the amplification-prone solve, which is more effective than only
+# smoothing the pose output. Window=10 at 37 fps ≈ 0.27 s lag (static tags only).
+_CORNER_WIN = 10
+_CORNER_TIMEOUT = 0.5  # seconds; reset buffer if tag unseen longer than this
+
 # DEFAULT_SETTINGS is imported from settings_store (single source of truth).
 
 PROP_MAP = {
@@ -76,6 +84,7 @@ class CameraService:
         self.detector = AprilTagDetector(families="tag36h11")
         self.fps = FPSCaculator()
         self.smoother = PoseSmoother(**smoothing_store.load())
+        self._corner_buf = {}  # tag_id -> {"corners": deque, "center": deque, "last": t}
 
         # Transform from the camera optical frame (x right, y down, z forward) to
         # the world frame the novel PoseEstimator uses. Built so that an optical
@@ -230,6 +239,7 @@ class CameraService:
         out = []
         cam_pose = self.pose_estimator.camera_pose
 
+        now_t = time.time()
         for det in detections:
             corners_float = det.corners.astype(np.float32)
             cv2.cornerSubPix(gray, corners_float, (5, 5), (-1, -1), SUBPIX_CRITERIA)
@@ -241,14 +251,32 @@ class CameraService:
                 cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
             cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
+            # Corner pre-smoothing: accumulate sub-pixel-refined corners and average
+            # them before the bearing-ray solve. Reduces pixel noise before it enters
+            # the amplification-prone linear system (more effective than post-smoothing
+            # alone). Only appropriate for static or slow-moving tags.
+            cbuf = self._corner_buf.get(det.tag_id)
+            if cbuf is None or now_t - cbuf["last"] > _CORNER_TIMEOUT:
+                cbuf = {
+                    "corners": deque(maxlen=_CORNER_WIN),
+                    "center": deque(maxlen=_CORNER_WIN),
+                    "last": now_t,
+                }
+                self._corner_buf[det.tag_id] = cbuf
+            cbuf["last"] = now_t
+            cbuf["corners"].append(corners_float.copy())
+            cbuf["center"].append(det.center.astype(np.float64))
+            smooth_corners = np.mean(np.array(cbuf["corners"]), axis=0)
+            smooth_center_px = np.mean(np.array(cbuf["center"]), axis=0)
+
             # Novel pose-estimation method (world frame).
             target_vectors = np.zeros((4, 3))
             for i in range(4):
                 target_vectors[i] = self.pose_estimator.getTargetVectorFromPixel(
-                    corners_float[i][0], corners_float[i][1]
+                    float(smooth_corners[i][0]), float(smooth_corners[i][1])
                 )
             center_vec = self.pose_estimator.getTargetVectorFromPixel(
-                float(det.center[0]), float(det.center[1])
+                float(smooth_center_px[0]), float(smooth_center_px[1])
             )
             novel = np.mean(
                 self.pose_estimator.getApriltagPose(target_vectors, center_vector=center_vec),
