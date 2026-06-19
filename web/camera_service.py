@@ -139,7 +139,6 @@ class CameraService:
                 # speed (~120 fps with auto exposure) even when manual is requested.
                 for _ in range(30):
                     cap.read()
-                cap.set(cv2.CAP_PROP_AUTO_WB, 0)
                 self.apply_settings(self.settings)
                 # Flush post-settings frames so pose estimates use the new exposure.
                 for _ in range(60):
