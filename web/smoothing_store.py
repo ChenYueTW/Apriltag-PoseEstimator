@@ -12,7 +12,7 @@ CONFIG_FILE = os.path.join(WEB, "smoothing.json")
 
 DEFAULTS = {
     "enabled": True,
-    "window": 20,      # EMA effective memory (α = 2/(window+1))
+    "window": 30,      # EMA effective memory (α = 2/(window+1))
     "method": "ema",   # "mean", "median", or "ema"
 }
 
