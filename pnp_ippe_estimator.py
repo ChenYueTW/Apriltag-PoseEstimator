@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 CALIB_FILE = os.path.join(ROOT, "chessboard.calib.npz")
 
 # Matches PoseEstimator.apriltag_side_length so both methods use the same scale.
-DEFAULT_TAG_SIZE = 0.1651
+DEFAULT_TAG_SIZE = 0.1608
 
 
 class PnPIPPEEstimator:
