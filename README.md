@@ -51,7 +51,7 @@ Open **http://localhost:3000** (or `http://<machine-ip>:3000` from another devic
   detector if it is not installed.
 - **Calibration** is always read from `chessboard.calib.npz`. Regenerate it with
   `python chessboard_calibration.py`.
-- Tag side length is `0.1651 m` (set in `pose_estimator.py`); both estimators use
+- Tag side length is `0.161 m` (set in `pose_estimator.py`); both estimators use
   the same value.
 - Append `?nostream=1` to the URL to disable the live MJPEG stream (handy for
   screenshots / debugging).

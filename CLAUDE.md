@@ -40,7 +40,7 @@ There is no test framework. `test_estimator_function.py` is an ad-hoc sanity scr
 ## Conventions & gotchas
 
 - **Deploy target is Linux + V4L2.** `camera_service` opens V4L2 first, then DSHOW (Windows dev), then a synthetic "NO CAMERA" frame so the UI still boots without a camera. Windows is dev-only.
-- **Calibration is always `chessboard.calib.npz`** (not `camera.calib.npz`). Tag side length `0.1651 m`, set in `pose_estimator.py`; both estimators use it.
+- **Calibration is always `chessboard.calib.npz`** (not `camera.calib.npz`). Tag side length `0.161 m`, set in `pose_estimator.py`; both estimators use it.
 - `camera.py` is **standalone legacy code** the web app does not import, but it **reads the same `web/camera_settings.json`** via `settings_store.load()`, so settings adjusted in the web UI apply on its next run. Its live trackbar tweaks are session-only (not written back). Only one process can hold the camera at a time.
 - New estimation methods go in **new top-level files** (like `pnp_ippe_estimator.py`), not inside existing ones.
 - This project commits **one focused commit per feature/part**; follow that cadence.
