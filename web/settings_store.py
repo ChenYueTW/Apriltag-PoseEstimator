@@ -16,10 +16,10 @@ SETTINGS_FILE = os.path.join(WEB, "camera_settings.json")
 # Single source of truth for the camera settings (same spirit as camera.py).
 DEFAULTS = {
     "auto_exposure": False,
-    "exposure": 1300,   # paired with gain=19 + frozen white balance (≈4600K from the adapt-then-freeze prime)
+    "exposure": 1300,   # paired with gain=22 + frozen white balance (≈4600K from the adapt-then-freeze prime)
     "brightness": 0,    # neutral; let exposure control brightness
     "contrast": 64,     # sharper tag edges → better subpixel corner localisation
-    "gain": 19,         # best worst-case at the frozen WB: novel ≈+6mm, IPPE ≈-19mm vs 1.922m. Gain is a strong lever (≈14-20mm/step); novel & IPPE want slightly different gains, so this is the compromise
+    "gain": 22,         # with the square-constrained solve both methods agree to <1mm and land on 1.922m here (novel -1mm, IPPE -2mm). Gain moves both together (~8mm/step)
     "saturation": None,
 }
 
