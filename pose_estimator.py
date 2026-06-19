@@ -2,6 +2,11 @@ import numpy as np
 import cv2
 import math
 
+try:
+    from scipy.optimize import least_squares as _least_squares
+except Exception:  # pragma: no cover - scipy is a project dep, but degrade gracefully
+    _least_squares = None
+
 CALIB_FILE = "chessboard.calib.npz"
 
 data = np.load(CALIB_FILE)
@@ -108,6 +113,73 @@ class PoseEstimator:
             poses[i] = self.camera_pose + t[i] * target_vectors[i]
 
         return poses
+
+    def getApriltagPoseSquare(self, target_vectors):
+        """Improved solve: fit the 4 corner-ray depths to a metric SQUARE.
+
+        The original getApriltagPose enforces only coplanarity (a 3x3 exact
+        inversion) and then scales by the mean side length. That linear system is
+        ill-conditioned for a distant tag (condition number ~40 in practice), so
+        sub-pixel corner noise is amplified ~10x into the depth/pose estimate —
+        the cause of the large jitter and the metres-scale outliers.
+
+        Here each corner is P_i = camera_pose + d_i * v_i (v_i the unit bearing,
+        d_i the depth along the ray). We solve for the 4 depths that make the
+        reconstructed quad the best-fit SQUARE of the known side length S: four
+        equal sides + two equal diagonals (S*sqrt(2)). That is 6 residuals for 4
+        unknowns -> over-determined and well-conditioned, so corner noise is
+        averaged down instead of amplified. It uses the tag's known metric shape
+        (square + size), which the coplanarity-only method never exploited, yet
+        stays a 3D bearing-ray method, distinct from the IPPE image-plane homography.
+
+        Returns the 4 corner positions in the world frame (same shape/order as
+        getApriltagPose); falls back to getApriltagPose if scipy is unavailable.
+        """
+        v = np.asarray(target_vectors, dtype=float)
+
+        # Initial depths from the cheap coplanarity solve (ball-park is enough;
+        # the refinement below is robust to a poor start).
+        B = np.array([[v[0][0], -v[1][0], v[2][0]],
+                      [v[0][1], -v[1][1], v[2][1]],
+                      [v[0][2], -v[1][2], v[2][2]]])
+        try:
+            A = np.linalg.solve(B, v[3])
+            A = np.append(A, 1.0)
+        except np.linalg.LinAlgError:
+            A = np.ones(4)
+        sides = [np.linalg.norm(A[1] * v[1] - A[0] * v[0]),
+                 np.linalg.norm(A[2] * v[2] - A[1] * v[1]),
+                 np.linalg.norm(A[3] * v[3] - A[2] * v[2]),
+                 np.linalg.norm(A[0] * v[0] - A[3] * v[3])]
+        l_avg = np.mean(sides)
+        lam = self.apriltag_side_length / l_avg if l_avg > 0 else 1.0
+        d0 = np.abs(lam * A)
+
+        if _least_squares is None:
+            return self.getApriltagPose(target_vectors)
+
+        cam = self.camera_pose
+        S = self.apriltag_side_length
+        diag = S * math.sqrt(2.0)
+
+        def residuals(d):
+            P = cam + d[:, None] * v
+            return [
+                np.linalg.norm(P[0] - P[1]) - S,
+                np.linalg.norm(P[1] - P[2]) - S,
+                np.linalg.norm(P[2] - P[3]) - S,
+                np.linalg.norm(P[3] - P[0]) - S,
+                np.linalg.norm(P[0] - P[2]) - diag,
+                np.linalg.norm(P[1] - P[3]) - diag,
+            ]
+
+        try:
+            sol = _least_squares(residuals, d0, method="lm", max_nfev=50)
+            d = sol.x
+        except Exception:
+            return self.getApriltagPose(target_vectors)
+
+        return cam + d[:, None] * v
 
     def rotation_matrix_from_axis_angle(self, axis, angle_rad):
         axis = np.array(axis, dtype=float)

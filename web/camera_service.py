@@ -301,11 +301,11 @@ class CameraService:
                 target_vectors[i] = self.pose_estimator.getTargetVectorFromPixel(
                     float(smooth_corners[i][0]), float(smooth_corners[i][1])
                 )
-            center_vec = self.pose_estimator.getTargetVectorFromPixel(
-                float(smooth_center_px[0]), float(smooth_center_px[1])
-            )
+            # Novel method: square-constrained ray solve. Far better conditioned
+            # than the coplanarity-only getApriltagPose (which amplified corner
+            # noise ~10x); fits the 4 ray depths to the known metric square.
             novel = np.mean(
-                self.pose_estimator.getApriltagPose(target_vectors, center_vector=center_vec),
+                self.pose_estimator.getApriltagPoseSquare(target_vectors),
                 axis=0,
             )
 
