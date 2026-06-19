@@ -247,7 +247,13 @@ class CameraService:
                 target_vectors[i] = self.pose_estimator.getTargetVectorFromPixel(
                     corners_float[i][0], corners_float[i][1]
                 )
-            novel = np.mean(self.pose_estimator.getApriltagPose(target_vectors), axis=0)
+            center_vec = self.pose_estimator.getTargetVectorFromPixel(
+                float(det.center[0]), float(det.center[1])
+            )
+            novel = np.mean(
+                self.pose_estimator.getApriltagPose(target_vectors, center_vector=center_vec),
+                axis=0,
+            )
 
             # PnP / IPPE baseline, transformed into the same world frame.
             ippe = self.ippe.estimate(corners_float)
