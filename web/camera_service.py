@@ -53,7 +53,7 @@ SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001
 # feeding them into the bearing-ray / linear-solve estimator. This reduces pixel
 # noise BEFORE the amplification-prone solve, which is more effective than only
 # smoothing the pose output. Window=10 at 37 fps ≈ 0.27 s lag (static tags only).
-_CORNER_WIN = 10
+_CORNER_WIN = 20  # raised from 10: steadier drawn corners + lower novel input noise (≈0.55s lag at 36fps; static tags only)
 _CORNER_TIMEOUT = 0.5  # seconds; reset buffer if tag unseen longer than this
 
 # DEFAULT_SETTINGS is imported from settings_store (single source of truth).
@@ -137,8 +137,17 @@ class CameraService:
                 # actively capturing before exposure and AWB changes are accepted
                 # by the firmware. Without this the camera runs at its default
                 # speed (~120 fps with auto exposure) even when manual is requested.
+                #
+                # White balance: prime with AWB ON so it adapts to the room, then
+                # FREEZE it (AUTO_WB=0). Left on, AWB keeps hunting the ambient
+                # light over minutes; that slowly migrates the detected corners and
+                # drifts the pose (observed both methods sliding tens of mm over a
+                # session, novel up to ~60mm). Freezing the *adapted* WB stops the
+                # drift while keeping a correctly-exposed image.
+                cap.set(cv2.CAP_PROP_AUTO_WB, 1)
                 for _ in range(30):
                     cap.read()
+                cap.set(cv2.CAP_PROP_AUTO_WB, 0)
                 self.apply_settings(self.settings)
                 # Flush post-settings frames so pose estimates use the new exposure.
                 for _ in range(60):
@@ -256,13 +265,6 @@ class CameraService:
         for det in detections:
             corners_float = det.corners.astype(np.float32)
             cv2.cornerSubPix(gray, corners_float, (5, 5), (-1, -1), SUBPIX_CRITERIA)
-            corners = corners_float.astype(int)
-            center = det.center.astype(int)
-
-            for i in range(4):
-                cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), 2)
-                cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
-            cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
             # Corner pre-smoothing: accumulate sub-pixel-refined corners and average
             # them before the bearing-ray solve. Reduces pixel noise before it enters
@@ -281,6 +283,17 @@ class CameraService:
             cbuf["center"].append(det.center.astype(np.float64))
             smooth_corners = np.mean(np.array(cbuf["corners"]), axis=0)
             smooth_center_px = np.mean(np.array(cbuf["center"]), axis=0)
+
+            # Draw the *smoothed* corners/center, not the raw per-frame subpixel
+            # ones: on a static tag the raw corners visibly jitter (worst on the
+            # low-contrast edge against the background), while the averaged corners
+            # are steady — and they are exactly what feeds the pose solve.
+            corners = smooth_corners.astype(int)
+            center = smooth_center_px.astype(int)
+            for i in range(4):
+                cv2.line(image, tuple(corners[i]), tuple(corners[(i + 1) % 4]), (0, 0, 255), 2)
+                cv2.circle(image, tuple(corners[i]), 4, (0, 255, 255), -1)
+            cv2.circle(image, tuple(center), 5, (0, 0, 25), -1)
 
             # Novel pose-estimation method (world frame).
             target_vectors = np.zeros((4, 3))
