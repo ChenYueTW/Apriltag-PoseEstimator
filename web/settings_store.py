@@ -16,10 +16,10 @@ SETTINGS_FILE = os.path.join(WEB, "camera_settings.json")
 # Single source of truth for the camera settings (same spirit as camera.py).
 DEFAULTS = {
     "auto_exposure": False,
-    "exposure": 900,
-    "brightness": 78,
-    "contrast": 24,
-    "gain": 12,
+    "exposure": 1800,   # high exposure → less shot noise → stable corner detection
+    "brightness": 0,    # neutral; let exposure control brightness
+    "contrast": 64,     # sharper tag edges → better subpixel corner localisation
+    "gain": 16,         # minimum gain to avoid amplifying electronic noise
     "saturation": None,
 }
 
