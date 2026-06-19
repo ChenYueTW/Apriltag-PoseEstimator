@@ -12,8 +12,11 @@ CONFIG_FILE = os.path.join(WEB, "smoothing.json")
 
 DEFAULTS = {
     "enabled": True,
-    "window": 60,            # used by mean/median/ema; ignored by cumulative
-    "method": "cumulative",  # "mean", "median", "ema", or "cumulative"
+    "window": 20,      # EMA memory ≈0.6s at 32fps: smooth yet tracks a moving camera
+    "method": "ema",   # responsive default. "cumulative" freezes after a while
+                       # (averages ALL frames since acquisition) — great for a
+                       # locked-down STATIC measurement, useless when moving. The
+                       # square solve gives ~1mm/frame, so ema is plenty precise.
 }
 
 SPEC = {

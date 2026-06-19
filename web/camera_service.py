@@ -53,7 +53,7 @@ SUBPIX_CRITERIA = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001
 # feeding them into the bearing-ray / linear-solve estimator. This reduces pixel
 # noise BEFORE the amplification-prone solve, which is more effective than only
 # smoothing the pose output. Window=10 at 37 fps ≈ 0.27 s lag (static tags only).
-_CORNER_WIN = 20  # raised from 10: steadier drawn corners + lower novel input noise (≈0.55s lag at 36fps; static tags only)
+_CORNER_WIN = 10  # corner pre-smoothing; kept modest so a moving camera still tracks (≈0.3s lag). The square solve already gives ~1mm/frame, so heavy corner averaging is no longer needed for precision.
 _CORNER_TIMEOUT = 0.5  # seconds; reset buffer if tag unseen longer than this
 
 # DEFAULT_SETTINGS is imported from settings_store (single source of truth).
