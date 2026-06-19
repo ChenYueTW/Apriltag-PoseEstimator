@@ -21,7 +21,7 @@ class PoseEstimator:
         self.x_hat = self.normalize(self.camera_x_axis)
         self.y_hat = self.normalize(self.camera_y_axis)
 
-        self.apriltag_side_length = 0.1608
+        self.apriltag_side_length = 0.1651
 
     def getTargetVector(self, tx, ty):
         # 標準針孔反投影：方向 = 前方 + tan(方位角)·右 + tan(仰角)·上，再歸一化
