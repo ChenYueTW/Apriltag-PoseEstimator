@@ -23,7 +23,7 @@ SPEC = {
         "label": "平均幀數 Window (frames)", "disabled_when_off": "enabled",
     },
     "method": {
-        "type": "choice", "options": ["mean", "median"],
+        "type": "choice", "options": ["mean", "median", "ema"],
         "label": "方式 Method", "disabled_when_off": "enabled",
     },
 }
