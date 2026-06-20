@@ -21,6 +21,11 @@ CSV_COLUMNS = [
     "actual_x", "actual_y", "actual_z",
     "novel_x", "novel_y", "novel_z", "novel_error",
     "ippe_x", "ippe_y", "ippe_z", "ippe_error",
+    # Orientation = the 3 rotational degrees of freedom (intrinsic xyz Euler,
+    # degrees), in the shared world frame, for both methods.
+    "novel_rx", "novel_ry", "novel_rz",
+    "ippe_rx", "ippe_ry", "ippe_rz",
+    "orientation_diff_deg",
     "ippe_reproj_error",
 ]
 
@@ -31,12 +36,27 @@ def _dist(a, b):
     return float(np.linalg.norm(np.asarray(a, float) - np.asarray(b, float)))
 
 
+def _euler_angle_diff(e1, e2):
+    """Geodesic angle (deg) between two intrinsic-xyz Euler orientations."""
+    if e1 is None or e2 is None:
+        return None
+    try:
+        from scipy.spatial.transform import Rotation
+        r1 = Rotation.from_euler("xyz", e1, degrees=True)
+        r2 = Rotation.from_euler("xyz", e2, degrees=True)
+        rel = r1.inv() * r2
+        return float(np.degrees(rel.magnitude()))
+    except Exception:
+        return None
+
+
 class ExperimentStore:
     def __init__(self):
         self._records = []
         self._lock = threading.Lock()
 
-    def add(self, tag_id, actual, novel, ippe, ippe_reproj_error):
+    def add(self, tag_id, actual, novel, ippe, ippe_reproj_error,
+            novel_euler=None, ippe_euler=None):
         rec = {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "tag_id": int(tag_id),
@@ -45,6 +65,9 @@ class ExperimentStore:
             "ippe": None if ippe is None else [float(v) for v in ippe],
             "novel_error": _dist(novel, actual),
             "ippe_error": _dist(ippe, actual),
+            "novel_euler": None if novel_euler is None else [float(v) for v in novel_euler],
+            "ippe_euler": None if ippe_euler is None else [float(v) for v in ippe_euler],
+            "orientation_diff_deg": _euler_angle_diff(novel_euler, ippe_euler),
             "ippe_reproj_error": (None if ippe_reproj_error is None else float(ippe_reproj_error)),
         }
         with self._lock:
@@ -76,11 +99,16 @@ class ExperimentStore:
             a = r["actual"]
             n = r["novel"] if r["novel"] is not None else [None, None, None]
             p = r["ippe"] if r["ippe"] is not None else [None, None, None]
+            ne = r.get("novel_euler") or [None, None, None]
+            pe = r.get("ippe_euler") or [None, None, None]
             writer.writerow([
                 r["timestamp"], r["tag_id"],
                 a[0], a[1], a[2],
                 n[0], n[1], n[2], r["novel_error"],
                 p[0], p[1], p[2], r["ippe_error"],
+                ne[0], ne[1], ne[2],
+                pe[0], pe[1], pe[2],
+                r.get("orientation_diff_deg"),
                 r["ippe_reproj_error"],
             ])
         return out.getvalue()

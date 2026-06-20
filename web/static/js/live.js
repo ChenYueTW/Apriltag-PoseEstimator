@@ -7,11 +7,15 @@
     if (!v) return "—";
     return `(${v[0].toFixed(3)}, ${v[1].toFixed(3)}, ${v[2].toFixed(3)})`;
   }
+  function fmtAng(v) {
+    if (!v) return "—";
+    return `(${v[0].toFixed(1)}, ${v[1].toFixed(1)}, ${v[2].toFixed(1)})`;
+  }
 
   App.onState((state) => {
     const dets = state.detections || [];
     if (!dets.length) {
-      body.innerHTML = '<tr class="empty"><td colspan="4">尚未偵測到 tag</td></tr>';
+      body.innerHTML = '<tr class="empty"><td colspan="6">尚未偵測到 tag</td></tr>';
       return;
     }
     body.innerHTML = dets
@@ -20,7 +24,9 @@
         <tr>
           <td><span class="tag-id">${d.id}</span></td>
           <td class="mono">${fmt3(d.novel_pose)}</td>
+          <td class="mono">${fmtAng(d.novel_euler)}</td>
           <td class="mono">${fmt3(d.ippe_pose)}</td>
+          <td class="mono">${fmtAng(d.ippe_euler)}</td>
           <td class="mono">${d.ippe_reproj_error != null ? d.ippe_reproj_error.toFixed(3) : "—"}</td>
         </tr>`
       )

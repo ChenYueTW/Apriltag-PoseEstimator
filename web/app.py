@@ -136,6 +136,8 @@ def api_experiment_record():
         novel=det.get("novel_pose"),
         ippe=det.get("ippe_pose"),
         ippe_reproj_error=det.get("ippe_reproj_error"),
+        novel_euler=det.get("novel_euler"),
+        ippe_euler=det.get("ippe_euler"),
     )
     return jsonify(rec)
 

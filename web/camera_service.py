@@ -67,6 +67,56 @@ PROP_MAP = {
 }
 
 
+def _canonical_perm(corners2d):
+    """Index permutation that reorders 4 image corners to TL, TR, BR, BL.
+
+    Mirrors PnPIPPEEstimator._canonical_corners so the novel method's corners
+    can be put in the same correspondence as IPPE's object points -> the two
+    methods' orientation angles are expressed in one convention and comparable.
+    """
+    pts = np.asarray(corners2d, dtype=np.float64).reshape(4, 2)
+    c = pts.mean(axis=0)
+    ang = np.arctan2(pts[:, 1] - c[1], pts[:, 0] - c[0])
+    order = np.argsort(ang)
+    start = int(np.argmin(pts[order].sum(axis=1)))
+    order = np.roll(order, -start)
+    pts_o = pts[order]
+    area = sum(pts_o[i, 0] * pts_o[(i + 1) % 4, 1] - pts_o[(i + 1) % 4, 0] * pts_o[i, 1]
+               for i in range(4))
+    if area < 0:  # force clockwise in image coords (y down)
+        order = order[[0, 3, 2, 1]]
+    return order
+
+
+def _euler_from_square_corners(world_corners, image_corners):
+    """Tag orientation (Euler xyz, degrees) from the 4 reconstructed corners.
+
+    Builds the tag frame (x right, y up, z out of the tag face) from the world-
+    frame square corners, matching IPPE's tag-frame convention, and returns the
+    world-frame orientation as intrinsic xyz Euler angles. None if scipy is
+    unavailable. The 6 DOF of the pose = (x, y, z) position + these 3 angles.
+    """
+    if _Rotation is None:
+        return None
+    perm = _canonical_perm(image_corners)
+    P = np.asarray(world_corners, dtype=float)[perm]  # TL, TR, BR, BL
+    x_axis = (P[1] - P[0]) + (P[2] - P[3])             # left -> right
+    y_axis = (P[0] - P[3]) + (P[1] - P[2])             # bottom -> top
+    nx = np.linalg.norm(x_axis)
+    ny = np.linalg.norm(y_axis)
+    if nx == 0 or ny == 0:
+        return None
+    x_axis /= nx
+    z_axis = np.cross(x_axis, y_axis / ny)
+    nz = np.linalg.norm(z_axis)
+    if nz == 0:
+        return None
+    z_axis /= nz
+    y_axis = np.cross(z_axis, x_axis)  # re-orthogonalise
+    R = np.column_stack([x_axis, y_axis, z_axis])
+    return _Rotation.from_matrix(R).as_euler("xyz", degrees=True).tolist()
+
+
 class CameraService:
     def __init__(self, camera_id=0, settings=None):
         self.camera_id = camera_id
@@ -304,22 +354,27 @@ class CameraService:
             # Novel method: square-constrained ray solve. Far better conditioned
             # than the coplanarity-only getApriltagPose (which amplified corner
             # noise ~10x); fits the 4 ray depths to the known metric square.
-            novel = np.mean(
-                self.pose_estimator.getApriltagPoseSquare(target_vectors),
-                axis=0,
-            )
+            novel_corners = self.pose_estimator.getApriltagPoseSquare(target_vectors)
+            novel = np.mean(novel_corners, axis=0)
+            # Orientation (the 3 rotational DOF): the 4 reconstructed square
+            # corners define the tag axes in the world frame. Canonicalised to the
+            # same TL,TR,BR,BL order IPPE uses so the two methods' angles match.
+            novel_euler = _euler_from_square_corners(novel_corners, smooth_corners)
 
             # PnP / IPPE baseline, transformed into the same world frame.
             ippe = self.ippe.estimate(corners_float)
             ippe_world = None
             ippe_reproj = None
             ippe_quat = None
+            ippe_euler = None
             if ippe is not None:
                 ippe_world = cam_pose + self.R_cam_to_world @ ippe["tvec"]
                 ippe_reproj = ippe["reproj_error"]
                 if _Rotation is not None:
                     R_world = self.R_cam_to_world @ ippe["R"]
                     ippe_quat = _Rotation.from_matrix(R_world).as_quat().tolist()
+                    ippe_euler = _Rotation.from_matrix(R_world).as_euler(
+                        "xyz", degrees=True).tolist()
                 # Draw the tag axes from the IPPE solution.
                 cv2.drawFrameAxes(
                     image, self.ippe.camera_matrix, self.ippe.dist_coeffs,
@@ -345,6 +400,8 @@ class CameraService:
                 "center": [float(center[0]), float(center[1])],
                 "novel_pose": novel_s,
                 "ippe_pose": ippe_s,
+                "novel_euler": novel_euler,
+                "ippe_euler": ippe_euler,
                 "ippe_reproj_error": (None if ippe_reproj is None else float(ippe_reproj)),
                 "ippe_quat": ippe_quat,
             })

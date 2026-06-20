@@ -18,8 +18,15 @@
     if (!v) return "—";
     return `(${v[0].toFixed(3)}, ${v[1].toFixed(3)}, ${v[2].toFixed(3)})`;
   }
+  function fmtAng(v) {
+    if (!v) return "—";
+    return `(${v[0].toFixed(1)}, ${v[1].toFixed(1)}, ${v[2].toFixed(1)})`;
+  }
   function fmtErr(v) {
     return v == null ? "—" : v.toFixed(4);
+  }
+  function fmt1(v) {
+    return v == null ? "—" : v.toFixed(2);
   }
 
   // ---- live current estimates + tag dropdown ----
@@ -83,7 +90,7 @@
   function renderRecords(records) {
     countEl.textContent = records.length;
     if (!records.length) {
-      recordsBody.innerHTML = '<tr class="empty"><td colspan="9">尚無資料</td></tr>';
+      recordsBody.innerHTML = '<tr class="empty"><td colspan="12">尚無資料</td></tr>';
       return;
     }
     recordsBody.innerHTML = records
@@ -104,6 +111,9 @@
             <td class="mono"><span class="${nCls}">${fmtErr(r.novel_error)}</span></td>
             <td class="mono">${fmt3(r.ippe)}</td>
             <td class="mono"><span class="${iCls}">${fmtErr(r.ippe_error)}</span></td>
+            <td class="mono">${fmtAng(r.novel_euler)}</td>
+            <td class="mono">${fmtAng(r.ippe_euler)}</td>
+            <td class="mono">${fmt1(r.orientation_diff_deg)}</td>
             <td><button class="btn danger tiny" data-del="${r.index}">刪除</button></td>
           </tr>`;
       })
