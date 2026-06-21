@@ -6,3 +6,6 @@ web/camera_settings.json
 web/smoothing.json
 web/experiments/*.csv
 web/experiment_sessions/*.json
+
+main_chapter2_revised.tex
+project_handbook.md
