@@ -147,6 +147,31 @@ def api_experiment_list():
     return jsonify(experiments.list())
 
 
+@app.route("/api/experiment/sessions", methods=["GET"])
+def api_experiment_sessions():
+    """List saved session names (newest first) + the active one."""
+    return jsonify({
+        "sessions": experiments.list_sessions(),
+        "active": experiments.current_session(),
+    })
+
+
+@app.route("/api/experiment/session", methods=["POST"])
+def api_experiment_session():
+    """Switch the active session, or start a new (empty) one with {"new": true}."""
+    data = request.get_json(force=True, silent=True) or {}
+    if data.get("new"):
+        experiments.new_session()
+    else:
+        name = data.get("name")
+        if not name or not experiments.select_session(name):
+            return jsonify({"error": "session not found"}), 404
+    return jsonify({
+        "active": experiments.current_session(),
+        "sessions": experiments.list_sessions(),
+    })
+
+
 @app.route("/api/experiment/records", methods=["DELETE"])
 def api_experiment_clear():
     experiments.clear()

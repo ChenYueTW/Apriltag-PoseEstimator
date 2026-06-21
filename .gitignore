@@ -5,3 +5,4 @@ __pycache__/
 web/camera_settings.json
 web/smoothing.json
 web/experiments/*.csv
+web/experiment_sessions/*.json

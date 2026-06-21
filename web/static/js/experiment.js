@@ -13,6 +13,8 @@
   const countEl = document.getElementById("exp-count");
   const exportBtn = document.getElementById("exp-export");
   const clearBtn = document.getElementById("exp-clear");
+  const sessionSelect = document.getElementById("exp-session");
+  const newSessionBtn = document.getElementById("exp-new-session");
 
   function fmt3(v) {
     if (!v) return "—";
@@ -81,6 +83,7 @@
       msg.textContent = "";
       App.toast(`已建立 tag ${data.tag_id} 的資料`);
       loadRecords();
+      loadSessions();  // first record of a batch creates a new session file
     } catch (e) {
       msg.textContent = "建立失敗（網路錯誤）";
     }
@@ -127,6 +130,40 @@
     } catch (e) { /* ignore */ }
   }
 
+  // ---- saved sessions dropdown ----
+  async function loadSessions() {
+    try {
+      const res = await fetch("/api/experiment/sessions", { cache: "no-store" });
+      const { sessions, active } = await res.json();
+      const opts = sessions
+        .map((s) => `<option value="${s}"${s === active ? " selected" : ""}>${s}</option>`)
+        .join("");
+      // When there is no active session yet (fresh / new batch), show a placeholder.
+      sessionSelect.innerHTML =
+        (active ? "" : '<option value="" selected>（新批次 new）</option>') + opts;
+    } catch (e) { /* ignore */ }
+  }
+
+  async function selectSession(name) {
+    await fetch("/api/experiment/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    await loadSessions();
+    await loadRecords();
+  }
+
+  async function newSession() {
+    await fetch("/api/experiment/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ new: true }),
+    });
+    await loadSessions();
+    await loadRecords();
+  }
+
   recordsBody.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-del]");
     if (!btn) return;
@@ -139,15 +176,22 @@
   });
 
   clearBtn.addEventListener("click", async () => {
-    if (!confirm("確定要清除所有實驗資料？")) return;
+    if (!confirm("確定要清除目前這份實驗資料？")) return;
     await fetch("/api/experiment/records", { method: "DELETE" });
     loadRecords();
+    loadSessions();
   });
+
+  sessionSelect.addEventListener("change", () => {
+    if (sessionSelect.value) selectSession(sessionSelect.value);
+  });
+  newSessionBtn.addEventListener("click", newSession);
 
   createBtn.addEventListener("click", createRecord);
 
   document.addEventListener("tabchange", (e) => {
-    if (e.detail === "experiment") loadRecords();
+    if (e.detail === "experiment") { loadSessions(); loadRecords(); }
   });
+  loadSessions();
   loadRecords();
 })();

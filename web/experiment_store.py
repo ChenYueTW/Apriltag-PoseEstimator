@@ -3,10 +3,17 @@
 Each record pairs a user-entered ground-truth coordinate with the pose that the
 novel method and the PnP/IPPE baseline estimated at button-press time, plus the
 Euclidean error of each method.  Records can be exported to CSV for the paper.
+
+Records are grouped into **sessions** and auto-persisted to disk as JSON the
+moment they change, so a server restart no longer loses unexported data. A
+session's file is named after the timestamp of its first record (YYYYMMDD_HHMM).
+On startup the most recent session is reloaded; the UI can switch between saved
+sessions.
 """
 
 import csv
 import io
+import json
 import os
 import threading
 from datetime import datetime
@@ -15,6 +22,7 @@ import numpy as np
 
 WEB = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(WEB, "experiments")
+SESSION_DIR = os.path.join(WEB, "experiment_sessions")
 
 CSV_COLUMNS = [
     "timestamp", "tag_id",
@@ -53,8 +61,59 @@ def _euler_angle_diff(e1, e2):
 class ExperimentStore:
     def __init__(self):
         self._records = []
+        self._session = None  # active session name, e.g. "20260619_2249"
         self._lock = threading.Lock()
+        self._load_latest()
 
+    # ----------------------------------------------------------- persistence
+    def _session_path(self, name):
+        return os.path.join(SESSION_DIR, name + ".json")
+
+    def _save_locked(self):
+        """Persist the active session to disk. Caller must hold the lock."""
+        if self._session is None:
+            return
+        os.makedirs(SESSION_DIR, exist_ok=True)
+        tmp = self._session_path(self._session) + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"session": self._session, "records": self._records},
+                      f, ensure_ascii=False, indent=2)
+        os.replace(tmp, self._session_path(self._session))  # atomic
+
+    def list_sessions(self):
+        """All saved session names, newest first (names sort chronologically)."""
+        if not os.path.isdir(SESSION_DIR):
+            return []
+        names = [f[:-5] for f in os.listdir(SESSION_DIR) if f.endswith(".json")]
+        return sorted(names, reverse=True)
+
+    def _load_latest(self):
+        names = self.list_sessions()
+        if names:
+            self.select_session(names[0])
+
+    def select_session(self, name):
+        path = self._session_path(name)
+        if not os.path.exists(path):
+            return False
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        with self._lock:
+            self._records = data.get("records", [])
+            self._session = name
+        return True
+
+    def new_session(self):
+        """Start a fresh empty session; the next record names its file."""
+        with self._lock:
+            self._records = []
+            self._session = None
+
+    def current_session(self):
+        with self._lock:
+            return self._session
+
+    # --------------------------------------------------------------- records
     def add(self, tag_id, actual, novel, ippe, ippe_reproj_error,
             novel_euler=None, ippe_euler=None):
         rec = {
@@ -71,7 +130,17 @@ class ExperimentStore:
             "ippe_reproj_error": (None if ippe_reproj_error is None else float(ippe_reproj_error)),
         }
         with self._lock:
+            if self._session is None:
+                # Name the session after the FIRST record's time (no seconds).
+                # If another batch already used this minute, suffix it so we never
+                # overwrite an existing session file.
+                base = datetime.fromisoformat(rec["timestamp"]).strftime("%Y%m%d_%H%M")
+                name, n = base, 2
+                while os.path.exists(self._session_path(name)):
+                    name, n = f"{base}_{n}", n + 1
+                self._session = name
             self._records.append(rec)
+            self._save_locked()
         return rec
 
     def list(self):
@@ -79,13 +148,21 @@ class ExperimentStore:
             return [dict(r, index=i) for i, r in enumerate(self._records)]
 
     def clear(self):
+        """Empty the active session and remove its file from disk."""
         with self._lock:
+            if self._session is not None:
+                try:
+                    os.remove(self._session_path(self._session))
+                except OSError:
+                    pass
             self._records = []
+            self._session = None
 
     def delete(self, index):
         with self._lock:
             if 0 <= index < len(self._records):
                 self._records.pop(index)
+                self._save_locked()
                 return True
         return False
 
@@ -114,10 +191,16 @@ class ExperimentStore:
         return out.getvalue()
 
     def save_csv(self):
-        """Persist a timestamped copy under web/experiments/, return its path."""
+        """Persist a CSV copy under web/experiments/, return its path.
+
+        Named after the active session (first record's time) when there is one,
+        so the CSV matches the persisted session file.
+        """
         os.makedirs(EXPORT_DIR, exist_ok=True)
-        name = f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        path = os.path.join(EXPORT_DIR, name)
+        with self._lock:
+            session = self._session
+        stamp = session or datetime.now().strftime("%Y%m%d_%H%M")
+        path = os.path.join(EXPORT_DIR, f"experiment_{stamp}.csv")
         with open(path, "w", newline="", encoding="utf-8-sig") as f:
             f.write(self.to_csv())
         return path
